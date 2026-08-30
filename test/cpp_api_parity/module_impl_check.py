@@ -336,9 +336,10 @@ def write_test_to_test_class(
                 ],
             )
 
+        _test_device = "test_device" if device != "cpu" else "test_cpu"
         test_fn = decorate_test_fn(
             test_fn=test_fn,
-            test_device=test_params_dict.get("test_device", True),
+            test_device=test_params_dict.get(_test_device, True),
             has_impl_parity=parity_table["torch::nn"][module_full_name][0]
             and test_params_dict.get("has_parity", True),
             device=device,

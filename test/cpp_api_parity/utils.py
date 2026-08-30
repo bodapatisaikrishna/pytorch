@@ -7,7 +7,7 @@ from collections import namedtuple
 import torch
 import torch.testing._internal.common_nn as common_nn
 import torch.utils.cpp_extension
-from torch.testing._internal.common_utils import TEST_ACCELERATOR, ACCELERATOR_TYPE
+from torch.testing._internal.common_utils import ACCELERATOR_TYPE, TEST_ACCELERATOR
 
 
 # Note that this namedtuple is for C++ parity test mechanism's internal use.
@@ -342,7 +342,9 @@ def compute_arg_dict(test_params_dict, test_instance):
 
 def decorate_test_fn(test_fn, test_device, has_impl_parity, device):
     if device == ACCELERATOR_TYPE:
-        test_fn = unittest.skipIf(not TEST_ACCELERATOR, "Accelerator unavailable")(test_fn)
+        test_fn = unittest.skipIf(not TEST_ACCELERATOR, "Accelerator unavailable")(
+            test_fn
+        )
     if device != "cpu":
         test_fn = unittest.skipIf(not test_device, "Excluded from accelerator tests")(
             test_fn
