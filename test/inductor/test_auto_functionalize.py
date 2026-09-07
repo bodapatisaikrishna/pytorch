@@ -76,9 +76,7 @@ class AutoFunctionalizeTests(torch._inductor.test_case.TestCase):
             def f(x):
                 torch.ops.mylib.foo(x)
 
-            x = torch.full((2,), 127, dtype=torch.uint8).view(
-                torch.float8_e8m0fnu
-            )
+            x = torch.full((2,), 127, dtype=torch.uint8).view(torch.float8_e8m0fnu)
             torch.compile(f, backend="inductor", fullgraph=True)(x)
 
     @torch._inductor.config.patch(enable_auto_functionalized_v2=False)
