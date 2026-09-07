@@ -3,6 +3,7 @@
 # flake8: noqa
 
 import itertools
+import os
 import subprocess
 import sys
 import unittest
@@ -14,6 +15,7 @@ from torch.testing._internal.common_device_type import (
     onlyAccelerator,
     ops,
     skipOps,
+    skipXPUIf,
     xfail,
 )
 from torch.testing._internal.common_methods_invocations import op_db
@@ -57,8 +59,8 @@ fake_export_failures = {
     xfail("masked.var"),
 }
 
-# These pass with CUDA enabled but still fail fake CUDA export on CPU-only builds.
-if not torch.backends.cuda.is_built():
+# These pass with GPU enabled but still fail fake GPU export on CPU-only builds.
+if not (torch.backends.cuda.is_built() or torch.xpu._is_compiled()):
     fake_export_failures.add(xfail("geqrf"))
     fake_export_failures.add(xfail("sparse.sampled_addmm"))
     fake_export_failures.add(xfail("to_sparse"))
@@ -127,7 +129,7 @@ class TestExportOpInfo(TestCase):
     @ops(op_db, allowed_dtypes=(torch.float,))
     @skipOps(export_failures | fake_export_failures)
     @unittest.skipIf(IS_FBCODE, "tests broken with unexpected successes internally")
-    @parametrize("target_device", ["cuda:0"])
+    @parametrize("target_device", ["cuda:0", "xpu:0"])
     def test_fake_export(self, target_device, dtype, op):
         _test_export_helper(self, target_device, dtype, op)
 
@@ -152,7 +154,9 @@ def _get_env_by_device(device):
     device_type = torch.device(device).type
     if device_type == "cuda":
         env = {"CUDA_VISIBLE_DEVICES": ""}
-    # elif other device
+    elif device_type == "xpu":
+        env = os.environ.copy()
+        env["ONEAPI_DEVICE_SELECTOR"] = "*:cpu"
     return env
 
 
@@ -163,6 +167,7 @@ class TestExportOnFakeDevice(TestCase):
     # We set device-specific env variable to simulate a CPU machine with gpu build
     # Running this on all ops in op_db is too slow, so we only run on a selected subset
     @onlyAccelerator
+    @skipXPUIf(True, "https://github.com/intel/torch-xpu-ops/issues/5157")
     @unittest.skipIf(
         IS_WINDOWS,
         "Subprocess with simulated CPU machine imports op_db which triggers "
@@ -301,7 +306,9 @@ accelerator_calls_behavior_unchanged()
         self.assertEqual(r, "")
 
 
-instantiate_device_type_tests(TestExportOnFakeDevice, globals(), only_for=("cuda",))
+instantiate_device_type_tests(
+    TestExportOnFakeDevice, globals(), only_for=("cuda", "xpu"), allow_xpu=True
+)
 
 
 if __name__ == "__main__":
